@@ -1,36 +1,78 @@
 import pandas as pd
 import sklearn
 from sklearn import metrics
+from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
-def build_ml_pipelines(random_state) -> dict[str, sklearn.pipeline.Pipeline]:
+def build_ml_pipelines(
+    numerical_features, categorical_features, random_state
+) -> dict[str, sklearn.pipeline.Pipeline]:  # type: ignore
     # Models
     lr = LinearRegression(
         n_jobs=-1,
     )
     knn = KNeighborsRegressor(n_neighbors=20, n_jobs=-1)
+
     hgb = HistGradientBoostingRegressor(
         loss="absolute_error",
         max_iter=1000,
+        categorical_features=categorical_features,
         random_state=random_state,
     )
 
-    # Scaler
-    scaler = StandardScaler()
+    # Column transformer
+    ct = ColumnTransformer(
+        [
+            (
+                "scaler",
+                StandardScaler(),
+                numerical_features,
+            ),
+            (
+                "onehot",
+                OneHotEncoder(),
+                categorical_features,
+            ),
+        ],
+        remainder="passthrough",
+    )
 
     # Linear regression pipeline
-    lr_pipeline = make_pipeline(scaler, lr)
+    lr_pipeline = Pipeline(
+        steps=[
+            ("col_trans", ct),
+            (
+                "model",
+                lr,
+            ),
+        ]
+    )
 
     # KNN pipeline
-    knn_pipeline = make_pipeline(scaler, knn)
+    knn_pipeline = Pipeline(
+        steps=[
+            ("col_trans", ct),
+            (
+                "model",
+                knn,
+            ),
+        ]
+    )
 
     # Histogram gradient boosting pipeline
-    hgb_pipeline = make_pipeline(hgb)
+    hgb_pipeline = Pipeline(
+        steps=[
+            (
+                "model",
+                hgb,
+            ),
+        ]
+    )
 
     return {
         "linear regression": lr_pipeline,
