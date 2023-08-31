@@ -31,7 +31,7 @@ def download_data() -> None:
                 continue
 
         print(f"Downloading {dataset}...")
-        get_whole_dataset(dataset, platform_id=platform_id, tqdm=True, to_path=file_path)  # type: ignore
+        get_whole_dataset(dataset, platform_id=platform_id, to_path=file_path)  # type: ignore
 
 
 def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

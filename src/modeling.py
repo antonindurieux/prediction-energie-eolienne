@@ -8,9 +8,11 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+RANDOM_SEED = 2910
+
 
 def build_ml_pipelines(
-    numerical_features: list[str], categorical_features: list[str], random_state: int
+    numerical_features: list[str], categorical_features: list[str]
 ) -> dict[str, sklearn.pipeline.Pipeline]:  # type: ignore
     """
     Build pipelines of transforms with final estimators for linear regression, K-Nearest Neighbors and histogram gradient boosting.
@@ -18,7 +20,6 @@ def build_ml_pipelines(
     Args:
         numerical_features (list[str]): List of numerical features.
         categorical_features (list[str]): List of categorical features.
-        random_state (int): Random seed.
 
     Returns:
         dict[str, sklearn.pipeline.Pipeline]: Dictionary of linear regression, K-Nearest Neighbors and histogram gradient boosting pipelines.
@@ -32,7 +33,7 @@ def build_ml_pipelines(
     hgb = HistGradientBoostingRegressor(
         max_iter=1000,
         categorical_features=categorical_features,
-        random_state=random_state,
+        random_state=RANDOM_SEED,
     )
 
     # Column transformer
