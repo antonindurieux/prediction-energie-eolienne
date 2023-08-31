@@ -36,16 +36,19 @@ def download_data() -> None:
 
 def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Load and returns DataFrames of power production, installed wind power and weather reports.
+    Load, save into pickles and return DataFrames of power production, installed wind power and weather reports.
 
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: DataFrames of power production, installed wind power and weather reports.
     """
+    pickle_path = DATA_PATH / "pickles"
+    pickle_path.mkdir(parents=False, exist_ok=True)
+
     # Production
     print("Loading production data...")
 
-    if os.path.isfile(DATA_PATH / "production_df.pkl"):
-        production_df = pd.read_pickle(DATA_PATH / "production_df.pkl")
+    if os.path.isfile(pickle_path / "production_df.pkl"):
+        production_df = pd.read_pickle(pickle_path / "production_df.pkl")
 
     else:
         production_df = pd.read_csv(
@@ -65,7 +68,7 @@ def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             .sort_values(["Date", "Région"])
             .reset_index(drop=True)
         )
-        production_df.to_pickle(DATA_PATH / "production_df.pkl")
+        production_df.to_pickle(pickle_path / "production_df.pkl")
 
     # Installed wind power
     print("Loading installed wind power data...")
@@ -85,8 +88,8 @@ def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # Weather reports
     print("Loading weather reports data...")
 
-    if os.path.isfile(DATA_PATH / "meteo_df.pkl"):
-        meteo_df = pd.read_pickle(DATA_PATH / "meteo_df.pkl")
+    if os.path.isfile(pickle_path / "meteo_df.pkl"):
+        meteo_df = pd.read_pickle(pickle_path / "meteo_df.pkl")
 
     else:
         meteo_df = pd.read_csv(
@@ -108,6 +111,6 @@ def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         meteo_df = meteo_df.sort_values(["Date", "ID OMM station"]).reset_index(
             drop=True
         )
-        meteo_df.to_pickle(DATA_PATH / "meteo_df.pkl")
+        meteo_df.to_pickle(pickle_path / "meteo_df.pkl")
 
     return production_df, parc_regional_df, meteo_df

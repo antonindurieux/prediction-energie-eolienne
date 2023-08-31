@@ -1,3 +1,5 @@
+from typing import Callable, Union
+
 import numpy as np
 import pandas as pd
 
@@ -11,7 +13,9 @@ def normalize_production(
         - Compute a monthly interpolation of installed wind power capacities for each region, from yearly data.
         - Merge these monthly interpolations data into the production DataFrame,
           so as for each timestamp and region we get the nearest monthly estimated installed wind power.
-        - Then we divide the production data by the installed wind power estimation, to normalize the production.
+        - Then we divide the production data by the installed wind power estimation,
+          to normalize the production according to the estimated installed power capacities.
+
     Args:
         production_df (pd.DataFrame): DataFrame of power production.
         parc_regional_df (pd.DataFrame): DataFrame of installed wind power capacities.
@@ -45,13 +49,14 @@ def normalize_production(
 
 
 def compute_wind_direction_features(meteo_df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
+    """
+    Compute the sinus and cosinus of the wind direction, in order to take the cyclicity of angular data into account.
 
     Args:
-        meteo_df (pd.DataFrame): _description_
+        meteo_df (pd.DataFrame): Weather reports DataFrame.
 
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: Weather reports DataFrame.
     """
     meteo_df["Sinus direction du vent moyen 10 mn"] = np.sin(
         meteo_df["Direction du vent moyen 10 mn"] * np.pi / 180
@@ -63,34 +68,69 @@ def compute_wind_direction_features(meteo_df: pd.DataFrame) -> pd.DataFrame:
     return meteo_df
 
 
-def compute_weather_aggregations(meteo_df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
+def compute_weather_aggregations(
+    meteo_df: pd.DataFrame,
+    aggregation_dict: dict[str, Union[str, list[Union[str, Callable]], Callable]],
+) -> pd.DataFrame:
+    """
+    Compute the aggregation defined in aggregation_dict, for each region and timestamp.
 
     Args:
-        meteo_df (pd.DataFrame): _description_
+        meteo_df (pd.DataFrame): Weather reports DataFrame.
 
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: Aggregated weather reports DataFrame.
     """
+    aggregation_dict["region (code)"] = "first"
     meteo_agg_df = (
-        meteo_df.groupby(["Date", "region (name)"])
-        .agg(
-            {
-                "Pression au niveau mer": "mean",
-                "Variation de pression en 3 heures": "mean",
-                "Sinus direction du vent moyen 10 mn": "mean",
-                "Cosinus direction du vent moyen 10 mn": "mean",
-                "Vitesse du vent moyen 10 mn": "mean",
-                "Température": "mean",
-                "Point de rosée": "mean",
-                "Humidité": "mean",
-                "Pression station": "mean",
-                "Rafales sur une période": "mean",
-                "Rafale sur les 10 dernières minutes": "mean",
-                "Précipitations dans la dernière heure": "mean",
-            }
-        )
-        .reset_index()
+        meteo_df.groupby(["Date", "region (name)"]).agg(aggregation_dict).reset_index()
+    )
+
+    meteo_agg_df.columns = meteo_agg_df.columns.map("-".join)
+    meteo_agg_df = meteo_agg_df.rename(
+        columns={
+            "Date-": "Date",
+            "region (name)-": "region (name)",
+            "region (code)-first": "region (code)",
+        }
     )
 
     return meteo_agg_df
+
+
+def handle_nan_values(
+    production_meteo_df: pd.DataFrame,
+    mean_features: list[str],
+    std_features: list[str],
+    categorical_features: list[str],
+    target: str,
+) -> pd.DataFrame:
+    """
+    Handle nan values: we suppress rows with any nan in the feature and target columns,
+    except for standard deviation features where we encode them by -1 as they correspond to regions with a single weather station.
+
+    Args:
+        production_meteo_df (pd.DataFrame): Merged DataFrames of power production and weather reports.
+        mean_features (list[str]): Mean average aggregation features.
+        std_features (list[str]): Standard deviation aggregation features.
+        categorical_features (list[str]): Categorical features.
+        target (str): Target.
+
+    Returns:
+        pd.DataFrame: DataFrame without any nans for features and target.
+    """
+    init_len = len(production_meteo_df)
+    production_meteo_df = production_meteo_df[
+        production_meteo_df[mean_features + categorical_features + [target]]
+        .notna()
+        .all(axis=1)
+    ].copy()
+    filtered_len = len(production_meteo_df)
+    diff_len = init_len - filtered_len
+    print(
+        f"Suppression des NaNs: {diff_len} lignes supprimées ({diff_len / init_len:.2f}%)"
+    )
+
+    production_meteo_df[std_features] = production_meteo_df[std_features].fillna(-1)
+
+    return production_meteo_df
