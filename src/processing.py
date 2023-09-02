@@ -128,7 +128,7 @@ def handle_nan_values(
     filtered_len = len(production_meteo_df)
     diff_len = init_len - filtered_len
     print(
-        f"Suppression des NaNs: {diff_len} lignes supprimées ({diff_len / init_len:.2f}%)"
+        f"Suppression des NaNs: {diff_len} lignes supprimées ({100 * diff_len / init_len:.2f}%)"
     )
 
     production_meteo_df[std_features] = production_meteo_df[std_features].fillna(-1)
